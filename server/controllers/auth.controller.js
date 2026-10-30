@@ -30,14 +30,17 @@ const signin = async (req, res) => {
       expire: new Date() + 9999
     });
 
-    return res.json({
-      token,
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email
-      }
-    });
+    
+return res.json({
+  token,
+  user: {
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    role: user.role
+  }
+});
+
 
   } catch (err) {
     return res.status(401).json({

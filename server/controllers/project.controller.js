@@ -1,3 +1,4 @@
+
 import Project from "../models/project.model.js";
 
 // CREATE
@@ -43,16 +44,19 @@ const update = async (req, res) => {
     const project = await Project.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true }
+      {
+        new: true,
+        runValidators: true
+      }
     );
 
     if (!project) {
       return res.status(404).json({ error: "Project not found" });
     }
 
-    res.json(project);
+    return res.status(200).json(project);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    return res.status(400).json({ error: err.message });
   }
 };
 
@@ -81,6 +85,7 @@ const removeAll = async (req, res) => {
   }
 };
 
+// Export all controller functions
 export default {
   create,
   list,

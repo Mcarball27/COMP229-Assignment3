@@ -37,24 +37,33 @@ const read = async (req, res) => {
   }
 };
 
+
 // UPDATE
 const update = async (req, res) => {
   try {
     const qualification = await Qualification.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true }
+      {
+        new: true,
+        runValidators: true
+      }
     );
 
     if (!qualification) {
-      return res.status(404).json({ error: "Qualification not found" });
+      return res.status(404).json({
+        error: "Qualification not found"
+      });
     }
 
-    res.json(qualification);
+    return res.status(200).json(qualification);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    return res.status(400).json({
+      error: err.message
+    });
   }
 };
+
 
 // DELETE ONE
 const remove = async (req, res) => {

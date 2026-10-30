@@ -1,5 +1,10 @@
+
 import dotenv from "dotenv";
-dotenv.config({ path: "../.env" });
+
+dotenv.config({
+  path: new URL("./.env", import.meta.url)
+});
+
 
 import mongoose from "mongoose";
 

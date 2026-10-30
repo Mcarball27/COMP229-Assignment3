@@ -1,12 +1,26 @@
+
 import User from "../models/user.model.js";
 
-// CREATE
+// CREATE - New users receive the regular user role
 const create = async (req, res) => {
   try {
-    const user = new User(req.body);
+    const { name, email, password } = req.body;
+
+    const user = new User({
+      name,
+      email,
+      password,
+      role: "user"
+    });
+
     await user.save();
 
-    res.status(201).json(user);
+    res.status(201).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role
+    });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -15,42 +29,52 @@ const create = async (req, res) => {
 // READ ALL
 const list = async (req, res) => {
   try {
-    const users = await User.find();
-    res.json(users);
+    const users = await User.find()
+      .select("-hashed_password -salt");
+
+    res.status(200).json(users);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(500).json({ error: "Failed to retrieve users" });
   }
 };
 
 // READ ONE
 const read = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findById(req.params.id)
+      .select("-hashed_password -salt");
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    res.json(user);
+    res.status(200).json(user);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(400).json({ error: "Invalid user ID" });
   }
 };
 
-// UPDATE
+// UPDATE - Only allow name and email changes
 const update = async (req, res) => {
   try {
+    const { name, email } = req.body;
+
+    const updates = {};
+
+    if (name !== undefined) updates.name = name;
+    if (email !== undefined) updates.email = email;
+
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      req.body,
-      { new: true }
-    );
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select("-hashed_password -salt");
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    res.json(user);
+    res.status(200).json(user);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -65,7 +89,9 @@ const remove = async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    res.json({ message: "User deleted successfully" });
+    res.status(200).json({
+      message: "User deleted successfully"
+    });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -74,12 +100,19 @@ const remove = async (req, res) => {
 // DELETE ALL
 const removeAll = async (req, res) => {
   try {
-    await User.deleteMany({});
-    res.json({ message: "All users deleted successfully" });
+    const result = await User.deleteMany({});
+
+    res.status(200).json({
+      message: "All users deleted successfully",
+      deletedCount: result.deletedCount
+    });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(500).json({
+      error: "Failed to delete users"
+    });
   }
 };
+
 // FIND USER BY ID
 const userByID = async (req, res, next, id) => {
   try {
@@ -93,7 +126,6 @@ const userByID = async (req, res, next, id) => {
 
     req.profile = user;
     next();
-
   } catch (err) {
     return res.status(400).json({
       error: "Could not retrieve user"
