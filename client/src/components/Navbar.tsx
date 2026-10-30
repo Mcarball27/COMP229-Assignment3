@@ -3,9 +3,15 @@
 // Author: Maria Martina Carballo Diaz
 // -----------------------------------------------------------------------------
 
-import { useState } from 'react';
-import { NavLink, Link } from 'react-router-dom';
+
+// -----------------------------------------------------------------------------
+// Navbar.tsx — site-wide navigation bar.
+// Author: Maria Martina Carballo Diaz
+// -----------------------------------------------------------------------------
+import { useEffect, useState } from 'react';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import Logo from './Logo';
+import { getCurrentUser, signout } from '../api/authStorage';
 
 type NavLinkItem = {
   to: string;
@@ -26,9 +32,39 @@ const NAV_LINK_BASE =
   'px-3.5 py-2 rounded-md font-medium no-underline transition-colors hover:bg-white/5';
 
 export default function Navbar() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const navigate = useNavigate();
+
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(getCurrentUser);
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  // Update the Navbar when a user signs in or signs out.
+  useEffect(() => {
+    const updateAuth = () => {
+      setCurrentUser(getCurrentUser());
+    };
+
+    window.addEventListener('authChange', updateAuth);
+
+    return () => {
+      window.removeEventListener('authChange', updateAuth);
+    };
+  }, []);
+
+  function handleSignout() {
+    signout();
+    closeMobileMenu();
+    navigate('/');
+  }
+
+  const getLinkClass = (isActive: boolean) =>
+    [
+      NAV_LINK_BASE,
+      isActive
+        ? 'text-[#2a171d] bg-gradient-to-br from-accent to-accent-strong hover:bg-transparent'
+        : 'text-muted hover:text-text'
+    ].join(' ');
 
   return (
     <header className="sticky top-0 z-20 backdrop-blur-md bg-bg/75 border-b border-border">
@@ -41,7 +77,9 @@ export default function Navbar() {
           className="flex items-center gap-2.5 text-text no-underline font-bold tracking-wide hover:no-underline"
         >
           <Logo size={38} />
-          <span className="text-[1.05rem]">Martina Carballo Diaz</span>
+          <span className="text-[1.05rem]">
+            Martina Carballo Diaz
+          </span>
         </Link>
 
         {/* Mobile menu button */}
@@ -71,20 +109,63 @@ export default function Navbar() {
               to={link.to}
               end={link.end}
               onClick={closeMobileMenu}
-              className={({ isActive }) =>
-                [
-                  NAV_LINK_BASE,
-                  isActive
-                    ? 'text-[#2a171d] bg-gradient-to-br from-accent to-accent-strong hover:bg-transparent'
-                    : 'text-muted hover:text-text'
-                ].join(' ')
-              }
+              className={({ isActive }) => getLinkClass(isActive)}
             >
               {link.label}
             </NavLink>
           ))}
-        </nav>
 
+          {/* Authentication navigation */}
+          {currentUser ? (
+            <>
+              {/* Admin link or regular User name */}
+              {currentUser.role === 'admin' ? (
+                <NavLink
+                  to="/admin/contacts"
+                  onClick={closeMobileMenu}
+                  className={({ isActive }) =>
+                    getLinkClass(isActive)
+                  }
+                >
+                  Admin
+                </NavLink>
+              ) : (
+                <span className="px-3.5 py-2 text-accent font-medium">
+                  {currentUser.name}
+                </span>
+              )}
+
+              {/* Sign Out button */}
+              <button
+                type="button"
+                onClick={handleSignout}
+                className={`${NAV_LINK_BASE} text-muted hover:text-text bg-transparent border-0 cursor-pointer text-left`}
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <>
+              {/* Sign In link */}
+              <NavLink
+                to="/signin"
+                onClick={closeMobileMenu}
+                className={({ isActive }) => getLinkClass(isActive)}
+              >
+                Sign In
+              </NavLink>
+
+              {/* Sign Up link */}
+              <NavLink
+                to="/signup"
+                onClick={closeMobileMenu}
+                className={({ isActive }) => getLinkClass(isActive)}
+              >
+                Sign Up
+              </NavLink>
+            </>
+          )}
+        </nav>
       </div>
     </header>
   );

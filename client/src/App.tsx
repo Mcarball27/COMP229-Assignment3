@@ -15,6 +15,9 @@ import ProjectDetails from './pages/ProjectDetails';
 import Education from './pages/Education';
 import Services from './pages/Services';
 import Contact from './pages/Contact';
+import Signin from './pages/Signin';
+import Signup from './pages/Signup';
+import AdminContacts from './pages/AdminContacts';
 import NotFound from './pages/NotFound';
 
 export default function App() {
@@ -22,7 +25,6 @@ export default function App() {
     <div className="min-h-full flex flex-col">
       <Navbar />
 
-      {/* Main page content */}
       <main className="flex-1 w-full max-w-content mx-auto px-5 pt-10 pb-16">
         <Routes>
           <Route path="/" element={<Home />} />
@@ -33,7 +35,16 @@ export default function App() {
           <Route path="/services" element={<Services />} />
           <Route path="/contact" element={<Contact />} />
 
-          {/* Unknown pages */}
+          {/* Authentication */}
+          <Route path="/signin" element={<Signin />} />
+          <Route path="/signup" element={<Signup />} />
+
+          {/* Admin-only contact management */}
+          <Route
+            path="/admin/contacts"
+            element={<AdminContacts />}
+          />
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
