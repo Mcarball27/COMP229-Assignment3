@@ -3,9 +3,16 @@
 // Author: Maria Martina Carballo Diaz
 // -----------------------------------------------------------------------------
 
+
+/* -----------------------------------------------------------------------------
+   Contact.tsx — Contact page with MongoDB form submission.
+   Author: Maria Martina Carballo Diaz
+----------------------------------------------------------------------------- */
+
 import { useState } from 'react';
 import type { ChangeEvent, FocusEvent, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { submitContactMessage } from '../api/contacts';
 
 type PreferredContactMethod = 'email' | 'phone' | 'either';
 
@@ -39,13 +46,14 @@ const EMPTY_FORM: ContactFormValues = {
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_PATTERN = /^[0-9+()\-\s]{7,20}$/;
+
 const NAME_PATTERN =
   /^[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ'.\- ]{0,39}$/;
 
 const MESSAGE_MIN_LENGTH = 10;
 const MESSAGE_MAX_LENGTH = 500;
 
-// Validate required contact form fields.
+// Validate the contact form.
 function validate(values: ContactFormValues): FormErrors {
   const errors: FormErrors = {};
 
@@ -97,15 +105,18 @@ const FIELD_CONTROL =
   'bg-surface-2 border border-border text-text rounded-md px-3.5 py-2.5 text-base font-sans focus:outline-2 focus:outline-accent focus:outline-offset-2 aria-invalid:border-danger';
 
 export default function Contact() {
+  const navigate = useNavigate();
+
   const [formValues, setFormValues] =
     useState<ContactFormValues>(EMPTY_FORM);
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState<TouchedFields>({});
 
-  const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
-  // Update the form state whenever a field changes.
+  // Update the form whenever a field changes.
   const handleFieldChange = (
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -126,6 +137,7 @@ export default function Contact() {
     }
   };
 
+  // Validate a field after the user leaves it.
   const handleFieldBlur = (
     event: FocusEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -139,9 +151,12 @@ export default function Contact() {
     setErrors(validate(formValues));
   };
 
-  // Validate the form and redirect to Home after submission.
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  // Submit the form to MongoDB through the Express API.
+  const handleSubmit = async (
+    event: FormEvent<HTMLFormElement>
+  ) => {
     event.preventDefault();
+    setSubmitError('');
 
     const nextErrors = validate(formValues);
 
@@ -158,22 +173,43 @@ export default function Contact() {
       return;
     }
 
-    console.log('Contact form submitted:', formValues);
+    setSubmitting(true);
 
-    const submittedFirstName = formValues.firstName;
-    const submittedLastName = formValues.lastName;
+    try {
+      // Save the message in MongoDB.
+      await submitContactMessage({
+        firstName: formValues.firstName.trim(),
+        lastName: formValues.lastName.trim(),
+        phone: formValues.phone.trim(),
+        email: formValues.email.trim(),
+        message: formValues.message.trim(),
+        preferredContactMethod: formValues.preferredContactMethod
+      });
 
-    setFormValues(EMPTY_FORM);
-    setErrors({});
-    setTouched({});
+      const submittedFirstName = formValues.firstName;
+      const submittedLastName = formValues.lastName;
 
-    navigate('/', {
-      state: {
-        justSubmitted: true,
-        firstName: submittedFirstName,
-        lastName: submittedLastName
-      }
-    });
+      setFormValues(EMPTY_FORM);
+      setErrors({});
+      setTouched({});
+
+      // Redirect only after a successful API response.
+      navigate('/', {
+        state: {
+          justSubmitted: true,
+          firstName: submittedFirstName,
+          lastName: submittedLastName
+        }
+      });
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to send your message.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const errorFor = (name: FieldName): string | undefined =>
@@ -235,8 +271,8 @@ export default function Contact() {
           noValidate
           className="card grid gap-4"
         >
+          {/* First and last name */}
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-
             <label className={FIELD_LABEL}>
               <span>First Name</span>
 
@@ -302,8 +338,8 @@ export default function Contact() {
             </label>
           </div>
 
+          {/* Phone and email */}
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-
             <label className={FIELD_LABEL}>
               <span>Contact Number</span>
 
@@ -398,6 +434,7 @@ export default function Contact() {
             </div>
           </fieldset>
 
+          {/* Message */}
           <label className={FIELD_LABEL}>
             <span>Message</span>
 
@@ -434,8 +471,26 @@ export default function Contact() {
             )}
           </label>
 
-          <button type="submit" className="btn justify-self-start">
-            Send Message
+          {/* API submission status */}
+          {submitting && (
+            <p role="status" className="m-0 text-muted">
+              Sending your message...
+            </p>
+          )}
+
+          {submitError && (
+            <p role="alert" className="m-0 text-danger font-medium">
+              {submitError}
+            </p>
+          )}
+
+          {/* Submit button */}
+          <button
+            type="submit"
+            disabled={submitting}
+            className="btn justify-self-start"
+          >
+            {submitting ? 'Sending...' : 'Send Message'}
           </button>
         </form>
       </div>
